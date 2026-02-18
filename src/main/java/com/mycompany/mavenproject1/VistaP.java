@@ -42,6 +42,10 @@ import org.w3c.dom.NodeList;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import java.io.FileOutputStream;
+import java.util.Arrays;
+import java.util.stream.Collectors;
+import javax.swing.JLabel;
+import javax.swing.JSeparator;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
@@ -115,24 +119,26 @@ public class VistaP extends javax.swing.JFrame {
         jPanel6.setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
         jPanel6.setFocusCycleRoot(true);
         jPanel6.setInheritsPopupMenu(true);
-        jPanel6.setLayout(new java.awt.GridBagLayout());
+        jPanel6.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 50, 0));
 
         btnZip.setText("Importar Zip");
         btnZip.addActionListener(this::btnZipActionPerformed);
-        jPanel6.add(btnZip, new java.awt.GridBagConstraints());
+        jPanel6.add(btnZip);
 
         btnFolder.setText("Importar Carpeta");
         btnFolder.addActionListener(this::btnFolderActionPerformed);
-        jPanel6.add(btnFolder, new java.awt.GridBagConstraints());
+        jPanel6.add(btnFolder);
 
         jButton3.setText("Exportar a Excel");
         jButton3.addActionListener(this::jButton3ActionPerformed);
-        jPanel6.add(jButton3, new java.awt.GridBagConstraints());
+        jPanel6.add(jButton3);
 
         panelOpciones.add(jPanel6);
 
         jPanel3.setBackground(new java.awt.Color(255, 255, 255));
         jPanel3.setDebugGraphicsOptions(javax.swing.DebugGraphics.LOG_OPTION);
+        jPanel3.setMaximumSize(new java.awt.Dimension(32767, 100));
+        jPanel3.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT));
         jPanel3.add(lblEstado);
 
         panelOpciones.add(jPanel3);
@@ -148,7 +154,7 @@ public class VistaP extends javax.swing.JFrame {
         jPanel1.add(panelOpciones, gridBagConstraints);
 
         jPanel4.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel4.setLayout(new java.awt.GridLayout());
+        jPanel4.setLayout(new java.awt.GridLayout(1, 0));
 
         table.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
@@ -174,7 +180,7 @@ public class VistaP extends javax.swing.JFrame {
         jPanel1.add(jPanel4, gridBagConstraints);
 
         jPanel5.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel5.setLayout(new java.awt.GridLayout());
+        jPanel5.setLayout(new java.awt.GridLayout(1, 0));
 
         jScrollPane2.setBackground(new java.awt.Color(255, 255, 255));
         jScrollPane2.setBorder(javax.swing.BorderFactory.createTitledBorder("Columnas"));
@@ -615,12 +621,7 @@ public class VistaP extends javax.swing.JFrame {
         }
     }
 
-    /**
-     * Crea un JCheckBox por cada columna de la tabla dentro de jScrollPane2. Al
-     * desmarcar un checkbox, la columna se oculta de la tabla.
-     */
     private void crearCheckboxesColumnas() {
-        // Guardar referencia a todas las columnas
         todasLasColumnas.clear();
         todasLasTableColumns.clear();
         checkboxesColumnas.clear();
@@ -630,22 +631,137 @@ public class VistaP extends javax.swing.JFrame {
             todasLasTableColumns.add(table.getColumnModel().getColumn(i));
         }
 
-        // Crear panel con BoxLayout vertical para los checkboxes
+        // Agrupar columnas por categoría (ruta padre)
+        LinkedHashMap<String, List<Integer>> categorias = new LinkedHashMap<>();
+
+        for (int i = 0; i < todasLasColumnas.size(); i++) {
+            String columna = todasLasColumnas.get(i);
+            String categoria = obtenerCategoria(columna);
+            categorias.computeIfAbsent(categoria, k -> new ArrayList<>()).add(i);
+        }
+
+        // Panel principal con BoxLayout vertical
         JPanel panelCheckboxes = new JPanel();
         panelCheckboxes.setLayout(new BoxLayout(panelCheckboxes, BoxLayout.Y_AXIS));
         panelCheckboxes.setBackground(java.awt.Color.WHITE);
 
-        for (int i = 0; i < todasLasColumnas.size(); i++) {
-            JCheckBox cb = new JCheckBox(todasLasColumnas.get(i), true);
-            cb.setBackground(java.awt.Color.WHITE);
-            cb.addActionListener(evt -> actualizarColumnasVisibles());
-            checkboxesColumnas.add(cb);
-            panelCheckboxes.add(cb);
+        for (Map.Entry<String, List<Integer>> entry : categorias.entrySet()) {
+            String categoria = entry.getKey();
+            List<Integer> indices = entry.getValue();
+
+            // Panel de categoría con borde y título
+            JPanel panelCategoria = new JPanel();
+            panelCategoria.setLayout(new BoxLayout(panelCategoria, BoxLayout.Y_AXIS));
+            panelCategoria.setBackground(new java.awt.Color(240, 240, 245));
+            panelCategoria.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+                    javax.swing.BorderFactory.createEmptyBorder(6, 4, 2, 4),
+                    javax.swing.BorderFactory.createCompoundBorder(
+                            javax.swing.BorderFactory.createLineBorder(new java.awt.Color(180, 180, 200), 1, true),
+                            javax.swing.BorderFactory.createEmptyBorder(4, 6, 4, 6)
+                    )
+            ));
+
+            // Encabezado de categoría
+            JLabel lblCategoria = new JLabel(categoria.isEmpty() ? "(Raíz)" : categoria);
+            lblCategoria.setFont(lblCategoria.getFont().deriveFont(java.awt.Font.BOLD, 11f));
+            lblCategoria.setForeground(new java.awt.Color(60, 60, 120));
+            lblCategoria.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+            lblCategoria.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 3, 0));
+            panelCategoria.add(lblCategoria);
+
+            // Separador fino bajo el título
+            JSeparator sep = new JSeparator(JSeparator.HORIZONTAL);
+            sep.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 1));
+            sep.setForeground(new java.awt.Color(180, 180, 200));
+            panelCategoria.add(sep);
+            panelCategoria.add(javax.swing.Box.createVerticalStrut(3));
+
+            // Checkboxes de la categoría
+            for (int idx : indices) {
+                String nombreColumna = todasLasColumnas.get(idx);
+                String etiqueta = obtenerEtiquetaCorta(nombreColumna);
+
+                JCheckBox cb = new JCheckBox(etiqueta, true);
+                cb.setToolTipText(nombreColumna); // nombre completo en tooltip
+                cb.setBackground(new java.awt.Color(240, 240, 245));
+                cb.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+                cb.addActionListener(evt -> actualizarColumnasVisibles());
+
+                // Guardar en la posición correcta del índice original
+                while (checkboxesColumnas.size() <= idx) {
+                    checkboxesColumnas.add(null);
+                }
+                checkboxesColumnas.set(idx, cb);
+
+                panelCategoria.add(cb);
+            }
+
+            panelCategoria.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+            panelCheckboxes.add(panelCategoria);
         }
 
         jScrollPane2.setViewportView(panelCheckboxes);
         jScrollPane2.revalidate();
         jScrollPane2.repaint();
+    }
+
+    /**
+     * Extrae la categoría de una columna: todo excepto el último segmento.
+     * Ejemplos: "Archivo" -> "" (raíz) "@Version" -> "" (raíz)
+     * "Comprobante.Emisor" -> "Comprobante" "A.B.C@attr" -> "A > B > C" "A.B.C"
+     * -> "A > B"
+     */
+    private String obtenerCategoria(String nombreColumna) {
+        // Quitar el segmento de atributo (@...) si existe
+        String rutaBase = nombreColumna.contains("@")
+                ? nombreColumna.substring(0, nombreColumna.lastIndexOf('@'))
+                : nombreColumna;
+
+        // Limpiar punto final residual
+        if (rutaBase.endsWith(".")) {
+            rutaBase = rutaBase.substring(0, rutaBase.length() - 1);
+        }
+
+        // Sin ruta base = atributo de raíz o columna simple
+        if (rutaBase.isEmpty()) {
+            return "";
+        }
+
+        // Quitar último segmento para obtener solo la ruta padre
+        int ultimoPunto = rutaBase.lastIndexOf('.');
+        if (ultimoPunto < 0) {
+            // Un solo segmento: si venía con @ es su propio padre, si no es raíz
+            return nombreColumna.contains("@") ? limpiarNamespace(rutaBase) : "";
+        }
+
+        // Construir la ruta padre limpiando namespaces (xxx:Nombre -> Nombre)
+        return Arrays.stream(rutaBase.substring(0, ultimoPunto).split("\\."))
+                .map(this::limpiarNamespace)
+                .collect(Collectors.joining(" > "));
+    }
+
+    private String limpiarNamespace(String segmento) {
+        int colon = segmento.lastIndexOf(':');
+        return colon >= 0 ? segmento.substring(colon + 1) : segmento;
+    }
+
+    /**
+     * Devuelve solo el último segmento legible del nombre de columna. Ejemplos:
+     * "Comprobante.Emisor@Rfc" -> "@Rfc" "Comprobante.Emisor" -> "Emisor"
+     * "@Version" -> "@Version"
+     */
+    private String obtenerEtiquetaCorta(String nombreColumna) {
+        if (nombreColumna.equals("Archivo")) {
+            return "Archivo";
+        }
+
+        if (nombreColumna.contains("@")) {
+            return nombreColumna.substring(nombreColumna.lastIndexOf('@') + 1);
+        }
+
+        int ultimoPunto = nombreColumna.lastIndexOf('.');
+        return ultimoPunto >= 0 ? nombreColumna.substring(ultimoPunto + 1) : nombreColumna;
+//        return nombreColumna;
     }
 
     private void actualizarColumnasVisibles() {
