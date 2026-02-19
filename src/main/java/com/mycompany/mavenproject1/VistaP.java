@@ -61,7 +61,11 @@ public class VistaP extends javax.swing.JFrame {
     private List<JCheckBox> checkboxesColumnas = new ArrayList<>();
     private final LocalDateTime ahora = LocalDateTime.now();
     private final DateTimeFormatter formato = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm");
+    private boolean modeloSinCerosProcesado = false;
 
+    private DefaultTableModel modeloSinCeros = new DefaultTableModel();
+
+//    private List<Table>
     public VistaP() {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
@@ -84,6 +88,7 @@ public class VistaP extends javax.swing.JFrame {
         table.setModel(tableModel);
         table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         setExtendedState(JFrame.MAXIMIZED_BOTH);
+        checkFacturas.setVisible(false);
     }
 
     @SuppressWarnings("unchecked")
@@ -97,6 +102,7 @@ public class VistaP extends javax.swing.JFrame {
         btnZip = new javax.swing.JButton();
         btnFolder = new javax.swing.JButton();
         jButton3 = new javax.swing.JButton();
+        checkFacturas = new javax.swing.JCheckBox();
         jPanel3 = new javax.swing.JPanel();
         lblEstado = new javax.swing.JLabel();
         jPanel4 = new javax.swing.JPanel();
@@ -133,12 +139,21 @@ public class VistaP extends javax.swing.JFrame {
         jButton3.addActionListener(this::jButton3ActionPerformed);
         jPanel6.add(jButton3);
 
+        checkFacturas.setSelected(true);
+        checkFacturas.setText("Facturas en 0");
+        checkFacturas.addItemListener(this::checkFacturasItemStateChanged);
+        checkFacturas.addChangeListener(this::checkFacturasStateChanged);
+        checkFacturas.addActionListener(this::checkFacturasActionPerformed);
+        jPanel6.add(checkFacturas);
+
         panelOpciones.add(jPanel6);
 
         jPanel3.setBackground(new java.awt.Color(255, 255, 255));
         jPanel3.setDebugGraphicsOptions(javax.swing.DebugGraphics.LOG_OPTION);
         jPanel3.setMaximumSize(new java.awt.Dimension(32767, 100));
-        jPanel3.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT));
+        jPanel3.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 50, 0));
+
+        lblEstado.setFont(new java.awt.Font("Poppins", 0, 12)); // NOI18N
         jPanel3.add(lblEstado);
 
         panelOpciones.add(jPanel3);
@@ -209,15 +224,70 @@ public class VistaP extends javax.swing.JFrame {
 
     private void btnZipActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnZipActionPerformed
         seleccionarYExtraerZip();
+        modeloSinCerosProcesado = false;
+        checkFacturas.setVisible(true);
     }//GEN-LAST:event_btnZipActionPerformed
 
     private void btnFolderActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnFolderActionPerformed
         seleccionarYExtraerFolder();
+        modeloSinCerosProcesado = false;
+        checkFacturas.setVisible(true);
     }//GEN-LAST:event_btnFolderActionPerformed
 
     private void jButton3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton3ActionPerformed
         exportarAExcel();
     }//GEN-LAST:event_jButton3ActionPerformed
+
+    private void checkFacturasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_checkFacturasActionPerformed
+
+    }//GEN-LAST:event_checkFacturasActionPerformed
+
+    private void checkFacturasStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_checkFacturasStateChanged
+
+    }//GEN-LAST:event_checkFacturasStateChanged
+
+    private void checkFacturasItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_checkFacturasItemStateChanged
+        if (checkFacturas.isSelected()) {
+            table.setModel(tableModel);
+        } else {
+            if (modeloSinCerosProcesado) {
+                table.setModel(modeloSinCeros);
+            } else {
+                table.setModel(procesarModeloSinCeros());
+            }
+        }
+        ajustarAnchoColumnas();
+    }//GEN-LAST:event_checkFacturasItemStateChanged
+
+    private DefaultTableModel procesarModeloSinCeros() {
+        System.err.println("Modelo Procesado");
+        try {
+            int index = tableModel.findColumn("@Total");
+
+            for (int i = 0; i < tableModel.getColumnCount(); i++) {
+                modeloSinCeros.addColumn(tableModel.getColumnName(i));
+            }
+            for (int i = 0; i < tableModel.getRowCount(); i++) {
+
+                Object valorTotal = tableModel.getValueAt(i, index);
+                if (valorTotal != null && !valorTotal.toString().equals("0")) {
+
+                    Object[] fila = new Object[tableModel.getColumnCount()];
+
+                    for (int j = 0; j < tableModel.getColumnCount(); j++) {
+                        fila[j] = tableModel.getValueAt(i, j);
+                    }
+
+                    modeloSinCeros.addRow(fila);
+                }
+            }
+            modeloSinCerosProcesado = true;
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "Se produjo un error", "Error", JOptionPane.ERROR);
+        }
+
+        return modeloSinCeros;
+    }
 
     private void exportarAExcel() {
         if (tableModel.getRowCount() == 0) {
@@ -806,6 +876,7 @@ public class VistaP extends javax.swing.JFrame {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btnFolder;
     private javax.swing.JButton btnZip;
+    private javax.swing.JCheckBox checkFacturas;
     private javax.swing.JButton jButton3;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JPanel jPanel1;
