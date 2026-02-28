@@ -765,12 +765,14 @@ public class VistaP extends javax.swing.JFrame {
         todasLasTableColumns.clear();
         checkboxesColumnas.clear();
 
+        panelCheckboxes.removeAll();
+        panelCheckboxes.add(panelAjustes);
+
         for (int i = 0; i < table.getColumnCount(); i++) {
             todasLasColumnas.add(table.getColumnName(i));
             todasLasTableColumns.add(table.getColumnModel().getColumn(i));
         }
 
-        // Agrupar columnas por categoría (ruta padre)
         LinkedHashMap<String, List<Integer>> categorias = new LinkedHashMap<>();
 
         for (int i = 0; i < todasLasColumnas.size(); i++) {
@@ -779,7 +781,6 @@ public class VistaP extends javax.swing.JFrame {
             categorias.computeIfAbsent(categoria, k -> new ArrayList<>()).add(i);
         }
 
-        // Panel principal con BoxLayout vertical
         panelCheckboxes.setLayout(new BoxLayout(panelCheckboxes, BoxLayout.Y_AXIS));
         panelCheckboxes.setBackground(java.awt.Color.WHITE);
 
