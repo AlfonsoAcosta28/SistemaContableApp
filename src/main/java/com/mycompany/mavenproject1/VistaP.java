@@ -43,11 +43,16 @@ import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import java.io.FileOutputStream;
 import java.util.Arrays;
+import java.util.Set;
 import java.util.stream.Collectors;
+import javax.swing.ButtonGroup;
+import javax.swing.RowFilter;
 import javax.swing.JLabel;
+import javax.swing.JRadioButton;
 import javax.swing.JSeparator;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
+import javax.swing.table.TableRowSorter;
 
 public class VistaP extends javax.swing.JFrame {
 
@@ -61,11 +66,23 @@ public class VistaP extends javax.swing.JFrame {
     private List<JCheckBox> checkboxesColumnas = new ArrayList<>();
     private final LocalDateTime ahora = LocalDateTime.now();
     private final DateTimeFormatter formato = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm");
-    private boolean modeloSinCerosProcesado = false;
+    private TableRowSorter<DefaultTableModel> rowSorter;
 
-    private DefaultTableModel modeloSinCeros = new DefaultTableModel();
+    private static final Set<String> COLUMNAS_POR_DEFECTO = Set.of(
+            "fecha", "folio", "emisor", "subtotal",
+            "total", "importe", "descuento", "formadepagop"
+    );
 
-//    private List<Table>
+    private JPanel panelCheckboxes = new JPanel();
+    private JPanel panelAjustes;
+    private JCheckBox checkFacturas;
+    private ButtonGroup ajustesGrupo = new ButtonGroup();
+
+    private JRadioButton checkSeleccionarTodas;
+    private JRadioButton checkPorDefecto;
+
+
+
     public VistaP() {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
@@ -88,7 +105,7 @@ public class VistaP extends javax.swing.JFrame {
         table.setModel(tableModel);
         table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         setExtendedState(JFrame.MAXIMIZED_BOTH);
-        checkFacturas.setVisible(false);
+        botonesPorDefecto();
     }
 
     @SuppressWarnings("unchecked")
@@ -102,7 +119,6 @@ public class VistaP extends javax.swing.JFrame {
         btnZip = new javax.swing.JButton();
         btnFolder = new javax.swing.JButton();
         jButton3 = new javax.swing.JButton();
-        checkFacturas = new javax.swing.JCheckBox();
         jPanel3 = new javax.swing.JPanel();
         lblEstado = new javax.swing.JLabel();
         jPanel4 = new javax.swing.JPanel();
@@ -138,13 +154,6 @@ public class VistaP extends javax.swing.JFrame {
         jButton3.setText("Exportar a Excel");
         jButton3.addActionListener(this::jButton3ActionPerformed);
         jPanel6.add(jButton3);
-
-        checkFacturas.setSelected(true);
-        checkFacturas.setText("Facturas en 0");
-        checkFacturas.addItemListener(this::checkFacturasItemStateChanged);
-        checkFacturas.addChangeListener(this::checkFacturasStateChanged);
-        checkFacturas.addActionListener(this::checkFacturasActionPerformed);
-        jPanel6.add(checkFacturas);
 
         panelOpciones.add(jPanel6);
 
@@ -224,13 +233,13 @@ public class VistaP extends javax.swing.JFrame {
 
     private void btnZipActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnZipActionPerformed
         seleccionarYExtraerZip();
-        modeloSinCerosProcesado = false;
+        checkFacturas.setSelected(true);
         checkFacturas.setVisible(true);
     }//GEN-LAST:event_btnZipActionPerformed
 
     private void btnFolderActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnFolderActionPerformed
         seleccionarYExtraerFolder();
-        modeloSinCerosProcesado = false;
+        checkFacturas.setSelected(true);
         checkFacturas.setVisible(true);
     }//GEN-LAST:event_btnFolderActionPerformed
 
@@ -238,55 +247,113 @@ public class VistaP extends javax.swing.JFrame {
         exportarAExcel();
     }//GEN-LAST:event_jButton3ActionPerformed
 
-    private void checkFacturasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_checkFacturasActionPerformed
+    private void checkPorDefectoItemStateChanged(java.awt.event.MouseEvent evt) {
+        seleccionarPorDefecto();
+    }
 
-    }//GEN-LAST:event_checkFacturasActionPerformed
+    private void checkSeleccionarTodasItemStateChanged(java.awt.event.MouseEvent evt) {
+        seleccionarTodas();
+    }
+    private void checkFacturasItemStateChanged(java.awt.event.ItemEvent evt) {
+        if (rowSorter == null) return;
 
-    private void checkFacturasStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_checkFacturasStateChanged
-
-    }//GEN-LAST:event_checkFacturasStateChanged
-
-    private void checkFacturasItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_checkFacturasItemStateChanged
         if (checkFacturas.isSelected()) {
-            table.setModel(tableModel);
+            rowSorter.setRowFilter(null);
         } else {
-            if (modeloSinCerosProcesado) {
-                table.setModel(modeloSinCeros);
-            } else {
-                table.setModel(procesarModeloSinCeros());
+            int totalCol = encontrarColumnaTotal();
+            if (totalCol >= 0) {
+                rowSorter.setRowFilter(new RowFilter<DefaultTableModel, Integer>() {
+                    @Override
+                    public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
+                        Object valor = entry.getModel().getValueAt(entry.getIdentifier(), totalCol);
+                        if (valor == null) return false;
+                        try {
+                            return Double.parseDouble(valor.toString()) > 0;
+                        } catch (NumberFormatException e) {
+                            return false;
+                        }
+                    }
+                });
             }
         }
         ajustarAnchoColumnas();
-    }//GEN-LAST:event_checkFacturasItemStateChanged
+    }
 
-    private DefaultTableModel procesarModeloSinCeros() {
-        System.err.println("Modelo Procesado");
-        try {
-            int index = tableModel.findColumn("@Total");
+    private void botonesPorDefecto() {
+        panelCheckboxes.setLayout(new BoxLayout(panelCheckboxes, BoxLayout.Y_AXIS));
+        panelCheckboxes.setBackground(java.awt.Color.WHITE);
+        panelAjustes = new JPanel();
 
-            for (int i = 0; i < tableModel.getColumnCount(); i++) {
-                modeloSinCeros.addColumn(tableModel.getColumnName(i));
+        panelAjustes.setLayout(new BoxLayout(panelAjustes, BoxLayout.Y_AXIS));
+        panelAjustes.setBackground(new java.awt.Color(240, 240, 245));
+        panelAjustes.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+                javax.swing.BorderFactory.createEmptyBorder(6, 4, 2, 4),
+                javax.swing.BorderFactory.createCompoundBorder(
+                        javax.swing.BorderFactory.createLineBorder(new java.awt.Color(180, 180, 200), 1, true),
+                        javax.swing.BorderFactory.createEmptyBorder(4, 6, 4, 6)
+                )
+        ));
+
+        // Encabezado de categoría
+        JLabel lblCategoria = new JLabel("Ajustes");
+        lblCategoria.setFont(lblCategoria.getFont().deriveFont(java.awt.Font.BOLD, 11f));
+        lblCategoria.setForeground(new java.awt.Color(60, 60, 120));
+        lblCategoria.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+        lblCategoria.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 0, 3, 0));
+        panelAjustes.add(lblCategoria);
+
+        // Separador fino bajo el título
+        JSeparator sep = new JSeparator(JSeparator.HORIZONTAL);
+        sep.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 1));
+        sep.setForeground(new java.awt.Color(180, 180, 200));
+        panelAjustes.add(sep);
+        panelAjustes.add(javax.swing.Box.createVerticalStrut(3));
+
+        checkFacturas = new JCheckBox("Datos en 0", true);
+        checkFacturas.setBackground(new java.awt.Color(240, 240, 245));
+        checkFacturas.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+        checkFacturas.addItemListener(this::checkFacturasItemStateChanged);
+        panelAjustes.add(checkFacturas);
+
+        JSeparator sep2 = new JSeparator(JSeparator.HORIZONTAL);
+        sep2.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 1));
+        sep2.setForeground(new java.awt.Color(180, 180, 200));
+        panelAjustes.add(sep2);
+        panelAjustes.add(javax.swing.Box.createVerticalStrut(3));
+
+        checkPorDefecto = new JRadioButton("Valores por defecto", true);
+        checkPorDefecto.setBackground(new java.awt.Color(240, 240, 245));
+        checkPorDefecto.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+        checkPorDefecto.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                checkPorDefectoItemStateChanged(evt);
             }
-            for (int i = 0; i < tableModel.getRowCount(); i++) {
+        });
+        ajustesGrupo.add(checkPorDefecto);
+        panelAjustes.add(checkPorDefecto);
 
-                Object valorTotal = tableModel.getValueAt(i, index);
-                if (valorTotal != null && !valorTotal.toString().equals("0")) {
-
-                    Object[] fila = new Object[tableModel.getColumnCount()];
-
-                    for (int j = 0; j < tableModel.getColumnCount(); j++) {
-                        fila[j] = tableModel.getValueAt(i, j);
-                    }
-
-                    modeloSinCeros.addRow(fila);
-                }
+        checkSeleccionarTodas = new JRadioButton("Seleccionar todas", false);
+        checkSeleccionarTodas.setBackground(new java.awt.Color(240, 240, 245));
+        checkSeleccionarTodas.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+        ajustesGrupo.add(checkSeleccionarTodas);
+        checkSeleccionarTodas.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                checkSeleccionarTodasItemStateChanged(evt);
             }
-            modeloSinCerosProcesado = true;
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(null, "Se produjo un error", "Error", JOptionPane.ERROR);
+        });
+        panelAjustes.add(checkSeleccionarTodas);
+
+        panelAjustes.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
+        panelCheckboxes.add(panelAjustes);
+    }
+
+    private int encontrarColumnaTotal() {
+        for (int i = 0; i < tableModel.getColumnCount(); i++) {
+            if (obtenerEtiquetaCorta(tableModel.getColumnName(i)).equalsIgnoreCase("total")) {
+                return i;
+            }
         }
-
-        return modeloSinCeros;
+        return -1;
     }
 
     private void exportarAExcel() {
@@ -481,6 +548,8 @@ public class VistaP extends javax.swing.JFrame {
         List<String> columnas = (List<String>) resultado[1];
 
         poblarTabla(columnas, listaXmlData);
+        rowSorter = new TableRowSorter<>(tableModel);
+        table.setRowSorter(rowSorter);
         ajustarAnchoColumnas();
         crearCheckboxesColumnas();
         lblEstado.setText(listaXmlData.size() + " archivo(s) XML procesado(s) - "
@@ -711,7 +780,6 @@ public class VistaP extends javax.swing.JFrame {
         }
 
         // Panel principal con BoxLayout vertical
-        JPanel panelCheckboxes = new JPanel();
         panelCheckboxes.setLayout(new BoxLayout(panelCheckboxes, BoxLayout.Y_AXIS));
         panelCheckboxes.setBackground(java.awt.Color.WHITE);
 
@@ -751,7 +819,7 @@ public class VistaP extends javax.swing.JFrame {
                 String nombreColumna = todasLasColumnas.get(idx);
                 String etiqueta = obtenerEtiquetaCorta(nombreColumna);
 
-                JCheckBox cb = new JCheckBox(etiqueta, true);
+                JCheckBox cb = new JCheckBox(etiqueta, esColumnaPorDefecto(nombreColumna));
                 cb.setToolTipText(nombreColumna); // nombre completo en tooltip
                 cb.setBackground(new java.awt.Color(240, 240, 245));
                 cb.setAlignmentX(java.awt.Component.LEFT_ALIGNMENT);
@@ -773,6 +841,9 @@ public class VistaP extends javax.swing.JFrame {
         jScrollPane2.setViewportView(panelCheckboxes);
         jScrollPane2.revalidate();
         jScrollPane2.repaint();
+
+        checkPorDefecto.setSelected(true);
+        actualizarColumnasVisibles();
     }
 
     /**
@@ -834,6 +905,30 @@ public class VistaP extends javax.swing.JFrame {
 //        return nombreColumna;
     }
 
+    private boolean esColumnaPorDefecto(String nombreColumna) {
+        String etiqueta = obtenerEtiquetaCorta(nombreColumna).toLowerCase();
+        return COLUMNAS_POR_DEFECTO.contains(etiqueta);
+    }
+
+    private void seleccionarPorDefecto() {
+        for (int i = 0; i < checkboxesColumnas.size(); i++) {
+            JCheckBox cb = checkboxesColumnas.get(i);
+            if (cb != null) {
+                cb.setSelected(esColumnaPorDefecto(todasLasColumnas.get(i)));
+            }
+        }
+        actualizarColumnasVisibles();
+    }
+
+    private void seleccionarTodas() {
+        for (JCheckBox cb : checkboxesColumnas) {
+            if (cb != null) {
+                cb.setSelected(true);
+            }
+        }
+        actualizarColumnasVisibles();
+    }
+
     private void actualizarColumnasVisibles() {
         // Remover todas las columnas de la vista
         while (table.getColumnModel().getColumnCount() > 0) {
@@ -876,7 +971,6 @@ public class VistaP extends javax.swing.JFrame {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btnFolder;
     private javax.swing.JButton btnZip;
-    private javax.swing.JCheckBox checkFacturas;
     private javax.swing.JButton jButton3;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JPanel jPanel1;
