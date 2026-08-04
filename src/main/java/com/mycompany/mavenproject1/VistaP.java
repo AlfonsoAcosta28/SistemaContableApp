@@ -12,8 +12,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import com.mycompany.mavenproject1.sat.controlador.SatDescargaListener;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -43,8 +46,10 @@ import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import java.io.FileOutputStream;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
 import javax.swing.ButtonGroup;
 import javax.swing.RowFilter;
@@ -91,6 +96,14 @@ public class VistaP extends javax.swing.JFrame {
 
     private List<FilaItemConfig> configFiltrosFilas = new ArrayList<>();
 
+    // --- Descarga masiva de CFDI (SAT) ---
+    private File archivoCer;
+    private File archivoKey;
+    private JCheckBox checkEmitidos;
+    private JCheckBox checkRecibidos;
+    private final com.mycompany.mavenproject1.sat.controlador.SatDescargaMasivaController satController
+            = new com.mycompany.mavenproject1.sat.controlador.SatDescargaMasivaController();
+
     public VistaP() {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
@@ -115,6 +128,18 @@ public class VistaP extends javax.swing.JFrame {
         setExtendedState(JFrame.MAXIMIZED_BOTH);
         botonesPorDefecto();
         crearCheckboxesFilas();
+        crearOpcionesDescargaSAT();
+    }
+
+    /** Agrega, por código (sin tocar el .form), los checkboxes de tipo de consulta SAT. */
+    private void crearOpcionesDescargaSAT() {
+        checkEmitidos = new JCheckBox("Emitidos", true);
+        checkRecibidos = new JCheckBox("Recibidos", true);
+        checkEmitidos.setBackground(java.awt.Color.WHITE);
+        checkRecibidos.setBackground(java.awt.Color.WHITE);
+        jPanel3.add(checkEmitidos);
+        jPanel3.add(checkRecibidos);
+        jPanel3.revalidate();
     }
 
     @SuppressWarnings("unchecked")
@@ -132,6 +157,12 @@ public class VistaP extends javax.swing.JFrame {
         btnExportExcel = new javax.swing.JButton();
         jPanel3 = new javax.swing.JPanel();
         lblEstado = new javax.swing.JLabel();
+        jDateInit = new com.toedter.calendar.JDateChooser();
+        jDateFinish = new com.toedter.calendar.JDateChooser();
+        btnCER = new javax.swing.JButton();
+        btnKEY = new javax.swing.JButton();
+        txtPassword = new javax.swing.JPasswordField();
+        btnSearchSAT = new javax.swing.JButton();
         jPanel4 = new javax.swing.JPanel();
         jScrollPane1 = new javax.swing.JScrollPane();
         table = new javax.swing.JTable();
@@ -187,6 +218,21 @@ public class VistaP extends javax.swing.JFrame {
 
         lblEstado.setFont(new java.awt.Font("Poppins", 0, 12)); // NOI18N
         jPanel3.add(lblEstado);
+        jPanel3.add(jDateInit);
+        jPanel3.add(jDateFinish);
+
+        btnCER.setText("Seleccionar .cer");
+        btnCER.addActionListener(this::btnCERActionPerformed);
+        jPanel3.add(btnCER);
+
+        btnKEY.setText("Seleccionar .key");
+        btnKEY.addActionListener(this::btnKEYActionPerformed);
+        jPanel3.add(btnKEY);
+        jPanel3.add(txtPassword);
+
+        btnSearchSAT.setText("Consulta SAT");
+        btnSearchSAT.addActionListener(this::btnSearchSATActionPerformed);
+        jPanel3.add(btnSearchSAT);
 
         panelOpciones.add(jPanel3);
 
@@ -262,19 +308,116 @@ public class VistaP extends javax.swing.JFrame {
 
     private void btnZipActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnZipActionPerformed
         seleccionarYExtraerZip();
-        checkFacturas.setSelected(true);
-        checkFacturas.setVisible(true);
+//        checkFacturas.setSelected(true);
+//        checkFacturas.setVisible(true);
     }//GEN-LAST:event_btnZipActionPerformed
 
     private void btnFolderActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnFolderActionPerformed
         seleccionarYExtraerFolder();
-        checkFacturas.setSelected(true);
-        checkFacturas.setVisible(true);
+//        checkFacturas.setSelected(true);
+//        checkFacturas.setVisible(true);
     }//GEN-LAST:event_btnFolderActionPerformed
 
     private void btnExportExcelActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnExportExcelActionPerformed
         exportarAExcel();
     }//GEN-LAST:event_btnExportExcelActionPerformed
+
+    private void btnSearchSATActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSearchSATActionPerformed
+        Date initDate = jDateInit.getDate();
+        Date finishDate = jDateFinish.getDate();
+        char[] password = txtPassword.getPassword();
+
+        if (archivoCer == null || archivoKey == null) {
+            JOptionPane.showMessageDialog(this, "Seleccione el archivo .cer y el archivo .key de su e.firma.",
+                    "Datos incompletos", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (password.length == 0) {
+            JOptionPane.showMessageDialog(this, "Capture la contraseña de la e.firma.",
+                    "Datos incompletos", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (initDate == null || finishDate == null) {
+            JOptionPane.showMessageDialog(this, "Seleccione la fecha inicial y la fecha final.",
+                    "Datos incompletos", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (initDate.after(finishDate)) {
+            JOptionPane.showMessageDialog(this, "La fecha inicial no puede ser posterior a la fecha final.",
+                    "Datos incompletos", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (!checkEmitidos.isSelected() && !checkRecibidos.isSelected()) {
+            JOptionPane.showMessageDialog(this, "Seleccione al menos un tipo de comprobante: Emitidos o Recibidos.",
+                    "Datos incompletos", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Seleccionar carpeta destino para los CFDI descargados");
+        fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        fileChooser.setAcceptAllFileFilterUsed(false);
+        if (fileChooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+        File carpetaDestino = fileChooser.getSelectedFile();
+
+        LocalDate fechaInicial = initDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        LocalDate fechaFinal = finishDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+
+        btnSearchSAT.setEnabled(false);
+        lblEstado.setText("Iniciando descarga masiva de CFDI...");
+
+        satController.descargar(archivoCer, archivoKey, password, fechaInicial, fechaFinal,
+                checkEmitidos.isSelected(), checkRecibidos.isSelected(), carpetaDestino, new SatDescargaListener() {
+            @Override
+            public void onProgreso(String mensaje) {
+                lblEstado.setText(mensaje);
+            }
+
+            @Override
+            public void onExito(File carpeta, int totalXmlDescargados) {
+                btnSearchSAT.setEnabled(true);
+                lblEstado.setText(totalXmlDescargados + " CFDI descargado(s) en " + carpeta.getName());
+                JOptionPane.showMessageDialog(VistaP.this,
+                        totalXmlDescargados + " CFDI descargado(s) correctamente en:\n" + carpeta.getAbsolutePath(),
+                        "Descarga masiva completada", JOptionPane.INFORMATION_MESSAGE);
+                if (totalXmlDescargados > 0) {
+                    seleccionarYExtraerFolder(carpeta);
+                }
+            }
+
+            @Override
+            public void onError(String mensaje) {
+                btnSearchSAT.setEnabled(true);
+                lblEstado.setText("Error en la descarga masiva de CFDI");
+                JOptionPane.showMessageDialog(VistaP.this, mensaje, "Error al descargar CFDI del SAT",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+        });
+    }//GEN-LAST:event_btnSearchSATActionPerformed
+
+    private void btnCERActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCERActionPerformed
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Seleccionar certificado .cer de la e.firma");
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Certificado e.firma (*.cer)", "cer"));
+        if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+            archivoCer = fileChooser.getSelectedFile();
+            btnCER.setText(archivoCer.getName());
+            btnCER.setToolTipText(archivoCer.getAbsolutePath());
+        }
+    }//GEN-LAST:event_btnCERActionPerformed
+
+    private void btnKEYActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnKEYActionPerformed
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Seleccionar llave privada .key de la e.firma");
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Llave privada e.firma (*.key)", "key"));
+        if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+            archivoKey = fileChooser.getSelectedFile();
+            btnKEY.setText(archivoKey.getName());
+            btnKEY.setToolTipText(archivoKey.getAbsolutePath());
+        }
+    }//GEN-LAST:event_btnKEYActionPerformed
 
     private void checkPorDefectoItemStateChanged(java.awt.event.MouseEvent evt) {
         seleccionarPorDefecto();
@@ -378,14 +521,21 @@ public class VistaP extends javax.swing.JFrame {
 
     private void aplicarFiltroCompleto() {
         if (rowSorter == null) {
+            logImport("aplicarFiltroCompleto: rowSorter es null, no se aplican filtros");
             return;
         }
 
         List<RowFilter<DefaultTableModel, Integer>> filtros = new ArrayList<>();
 
+        boolean mostrarDatosEnCero = checkFacturas.isSelected();
+        logImport("aplicarFiltroCompleto: checkbox 'Datos en 0'=" + mostrarDatosEnCero
+                + " (si está desmarcado, se ocultan filas con Total<=0 o no numérico)");
+
         if (!checkFacturas.isSelected()) {
             int totalCol = encontrarColumnaTotal();
             if (totalCol >= 0) {
+                logImport("aplicarFiltroCompleto: activando filtro Total>0, índice columna Total=" + totalCol
+                        + " (encabezado='" + tableModel.getColumnName(totalCol) + "')");
                 filtros.add(new RowFilter<DefaultTableModel, Integer>() {
                     @Override
                     public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
@@ -400,12 +550,16 @@ public class VistaP extends javax.swing.JFrame {
                         }
                     }
                 });
+            } else {
+                logImport("aplicarFiltroCompleto: se pidió ocultar totales en 0 pero no se encontró columna 'Total'");
             }
         }
 
         for (FilaItemConfig config : configFiltrosFilas) {
             List<String> seleccionados = config.getValoresSeleccionados();
             if (seleccionados.isEmpty()) {
+                logImport("aplicarFiltroCompleto: filtro filas '" + config.getColumnaFiltro()
+                        + "' sin valores seleccionados (todos desmarcados) → ese filtro no aplica");
                 continue;
             }
 
@@ -415,6 +569,9 @@ public class VistaP extends javax.swing.JFrame {
                 col = encontrarColumnaPorEtiqueta("MetodoPago", "FormaPago");
             }
             if (col >= 0) {
+                logImport("aplicarFiltroCompleto: filtro filas columna=" + config.getColumnaFiltro()
+                        + " índice=" + col + " valores permitidos=" + seleccionados
+                        + " (encabezado='" + tableModel.getColumnName(col) + "')");
                 int colIdx = col;
                 filtros.add(new RowFilter<DefaultTableModel, Integer>() {
                     @Override
@@ -426,14 +583,40 @@ public class VistaP extends javax.swing.JFrame {
                         return set.contains(valor.toString().trim());
                     }
                 });
+            } else {
+                logImport("aplicarFiltroCompleto: no se encontró columna para filtro '" + config.getColumnaFiltro() + "'");
             }
         }
 
         if (filtros.isEmpty()) {
             rowSorter.setRowFilter(null);
+            logImport("aplicarFiltroCompleto: ningún filtro activo (RowFilter=null)");
         } else {
             rowSorter.setRowFilter(RowFilter.andFilter(filtros));
+            logImport("aplicarFiltroCompleto: aplicando AND de " + filtros.size() + " filtro(s)");
         }
+
+        int modelo = tableModel.getRowCount();
+        int vista = table.getRowCount();
+        logImport("aplicarFiltroCompleto: filas modelo=" + modelo + ", filas visibles=" + vista);
+
+        int colArchivo = -1;
+        for (int c = 0; c < tableModel.getColumnCount(); c++) {
+            if ("Archivo".equals(tableModel.getColumnName(c))) {
+                colArchivo = c;
+                break;
+            }
+        }
+        int colTotal = encontrarColumnaTotal();
+        for (int i = 0; i < modelo; i++) {
+            String archivo = colArchivo >= 0 ? String.valueOf(tableModel.getValueAt(i, colArchivo)) : "?";
+            String totalStr = colTotal >= 0 ? String.valueOf(tableModel.getValueAt(i, colTotal)) : "?";
+            int viewIdx = table.convertRowIndexToView(i);
+            boolean visible = viewIdx >= 0;
+            logImport("  fila modelo " + i + ": Archivo=" + archivo + ", Total=" + totalStr
+                    + ", visible=" + visible + (visible ? " (vista índice " + viewIdx + ")" : " OCULTA por filtro"));
+        }
+
         ajustarAnchoColumnas();
     }
 
@@ -531,41 +714,44 @@ public class VistaP extends javax.swing.JFrame {
         int result = fileChooser.showOpenDialog(this);
 
         if (result == JFileChooser.APPROVE_OPTION) {
-            File carpeta = fileChooser.getSelectedFile();
-
-            lblEstado.setText("Procesando carpeta...");
-
-            SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
-                private Exception error = null;
-                private Object[] resultado;
-
-                @Override
-                protected Void doInBackground() throws Exception {
-                    try {
-                        resultado = leerXmlDesdeCarpeta(carpeta);
-                    } catch (Exception ex) {
-                        error = ex;
-                    }
-                    return null;
-                }
-
-                @Override
-                protected void done() {
-                    if (error != null) {
-                        JOptionPane.showMessageDialog(VistaP.this,
-                                "Error al procesar la carpeta: " + error.getMessage(),
-                                "Error",
-                                JOptionPane.ERROR_MESSAGE);
-                        lblEstado.setText("Error al procesar la carpeta");
-                        error.printStackTrace();
-                    } else {
-                        procesarDatos(resultado);
-                    }
-                }
-            };
-
-            worker.execute();
+            seleccionarYExtraerFolder(fileChooser.getSelectedFile());
         }
+    }
+
+    /** Igual que {@link #seleccionarYExtraerFolder()} pero sin volver a preguntar la carpeta. */
+    private void seleccionarYExtraerFolder(File carpeta) {
+        lblEstado.setText("Procesando carpeta...");
+
+        SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
+            private Exception error = null;
+            private Object[] resultado;
+
+            @Override
+            protected Void doInBackground() throws Exception {
+                try {
+                    resultado = leerXmlDesdeCarpeta(carpeta);
+                } catch (Exception ex) {
+                    error = ex;
+                }
+                return null;
+            }
+
+            @Override
+            protected void done() {
+                if (error != null) {
+                    JOptionPane.showMessageDialog(VistaP.this,
+                            "Error al procesar la carpeta: " + error.getMessage(),
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE);
+                    lblEstado.setText("Error al procesar la carpeta");
+                    error.printStackTrace();
+                } else {
+                    procesarDatos(resultado);
+                }
+            }
+        };
+
+        worker.execute();
     }
 
     private void seleccionarYExtraerZip() {
@@ -628,14 +814,30 @@ public class VistaP extends javax.swing.JFrame {
         @SuppressWarnings("unchecked")
         List<String> columnas = (List<String>) resultado[1];
 
+        logImport("procesarDatos: listaXmlData.size()=" + listaXmlData.size()
+                + ", columnas=" + columnas.size());
+
         poblarTabla(columnas, listaXmlData);
+        logImport("poblarTabla: tableModel.getRowCount()=" + tableModel.getRowCount());
+
         rowSorter = new TableRowSorter<>(tableModel);
         table.setRowSorter(rowSorter);
         ajustarAnchoColumnas();
         crearCheckboxesColumnas();
         aplicarFiltroCompleto();
+
+        int filasModelo = tableModel.getRowCount();
+        int filasVista = table.getRowCount();
+        logImport("tras aplicarFiltroCompleto: filas modelo=" + filasModelo
+                + ", filas visibles (JTable)=" + filasVista
+                + (filasModelo != filasVista ? " → ALGUNAS FILAS OCULTAS POR FILTRO (ver log aplicarFiltroCompleto)" : ""));
+
         lblEstado.setText(listaXmlData.size() + " archivo(s) XML procesado(s) - "
                 + tableModel.getColumnCount() + " columna(s) detectada(s)");
+    }
+
+    private void logImport(String mensaje) {
+        logger.log(Level.INFO, "[Import XML] {0}", mensaje);
     }
 
     /**
@@ -646,35 +848,56 @@ public class VistaP extends javax.swing.JFrame {
         List<Map<String, String>> listaXmlData = new ArrayList<>();
         LinkedHashSet<String> todosLosCampos = new LinkedHashSet<>();
 
+        logImport("leerXmlDesdeZip: archivo=" + archivoZip.getAbsolutePath());
+
         try (ZipInputStream zis = new ZipInputStream(new FileInputStream(archivoZip))) {
             ZipEntry entry;
+            int indiceEntrada = 0;
 
             while ((entry = zis.getNextEntry()) != null) {
-                if (!entry.isDirectory() && entry.getName().toLowerCase().endsWith(".xml")) {
+                indiceEntrada++;
+                String nombreCompleto = entry.getName();
+                boolean esXml = !entry.isDirectory() && nombreCompleto.toLowerCase().endsWith(".xml");
 
-                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    byte[] buffer = new byte[1024];
-                    int len;
-
-                    while ((len = zis.read(buffer)) > 0) {
-                        baos.write(buffer, 0, len);
+                if (!esXml) {
+                    if (!entry.isDirectory()) {
+                        logImport("entrada #" + indiceEntrada + " omitida (no es .xml): " + nombreCompleto);
                     }
+                    zis.closeEntry();
+                    continue;
+                }
 
-                    byte[] xmlBytes = baos.toByteArray();
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                byte[] buffer = new byte[1024];
+                int len;
 
-                    Map<String, String> datosXml = extraerCamposXml(xmlBytes);
+                while ((len = zis.read(buffer)) > 0) {
+                    baos.write(buffer, 0, len);
+                }
 
-                    if (!datosXml.isEmpty()) {
-                        String nombreArchivo = new File(entry.getName()).getName();
-                        datosXml.put("_NOMBRE_ARCHIVO", nombreArchivo);
+                byte[] xmlBytes = baos.toByteArray();
+                logImport("entrada #" + indiceEntrada + " XML: rutaZip=\"" + nombreCompleto
+                        + "\", bytes=" + xmlBytes.length
+                        + ", soloNombre=\"" + new File(nombreCompleto).getName() + "\"");
 
-                        listaXmlData.add(datosXml);
-                        todosLosCampos.addAll(datosXml.keySet());
-                    }
+                Map<String, String> datosXml = extraerCamposXml(xmlBytes);
+
+                if (datosXml.isEmpty()) {
+                    logImport("  → NO agregado: extraerCamposXml devolvió mapa vacío (XML inválido o no CFDI parseable)");
+                } else {
+                    String nombreArchivo = new File(entry.getName()).getName();
+                    datosXml.put("_NOMBRE_ARCHIVO", nombreArchivo);
+
+                    listaXmlData.add(datosXml);
+                    todosLosCampos.addAll(datosXml.keySet());
+                    logImport("  → agregado fila índice " + (listaXmlData.size() - 1) + ", Archivo=\"" + nombreArchivo
+                            + "\", campos extraídos=" + datosXml.size());
                 }
 
                 zis.closeEntry();
             }
+
+            logImport("leerXmlDesdeZip: total filas en listaXmlData=" + listaXmlData.size());
         }
 
         // Preparar lista de columnas (solo datos, no toca UI)
@@ -1193,9 +1416,14 @@ public class VistaP extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton btnCER;
     private javax.swing.JButton btnExportExcel;
     private javax.swing.JButton btnFolder;
+    private javax.swing.JButton btnKEY;
+    private javax.swing.JButton btnSearchSAT;
     private javax.swing.JButton btnZip;
+    private com.toedter.calendar.JDateChooser jDateFinish;
+    private com.toedter.calendar.JDateChooser jDateInit;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
@@ -1212,5 +1440,6 @@ public class VistaP extends javax.swing.JFrame {
     private javax.swing.JLabel lblEstado;
     private javax.swing.JPanel panelOpciones;
     private javax.swing.JTable table;
+    private javax.swing.JPasswordField txtPassword;
     // End of variables declaration//GEN-END:variables
 }

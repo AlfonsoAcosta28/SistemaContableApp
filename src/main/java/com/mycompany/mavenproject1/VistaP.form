@@ -151,6 +151,36 @@
                     </Property>
                   </Properties>
                 </Component>
+                <Component class="com.toedter.calendar.JDateChooser" name="jDateInit">
+                </Component>
+                <Component class="com.toedter.calendar.JDateChooser" name="jDateFinish">
+                </Component>
+                <Component class="javax.swing.JButton" name="btnCER">
+                  <Properties>
+                    <Property name="text" type="java.lang.String" value="Seleccionar .cer"/>
+                  </Properties>
+                  <Events>
+                    <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btnCERActionPerformed"/>
+                  </Events>
+                </Component>
+                <Component class="javax.swing.JButton" name="btnKEY">
+                  <Properties>
+                    <Property name="text" type="java.lang.String" value="Seleccionar .key"/>
+                  </Properties>
+                  <Events>
+                    <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btnKEYActionPerformed"/>
+                  </Events>
+                </Component>
+                <Component class="javax.swing.JPasswordField" name="txtPassword">
+                </Component>
+                <Component class="javax.swing.JButton" name="btnSearchSAT">
+                  <Properties>
+                    <Property name="text" type="java.lang.String" value="Consulta SAT"/>
+                  </Properties>
+                  <Events>
+                    <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btnSearchSATActionPerformed"/>
+                  </Events>
+                </Component>
               </SubComponents>
             </Container>
           </SubComponents>
