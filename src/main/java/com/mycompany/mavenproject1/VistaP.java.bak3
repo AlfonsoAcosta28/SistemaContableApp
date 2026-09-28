@@ -212,45 +212,27 @@ public class VistaP extends javax.swing.JFrame {
         jPanel3.setDebugGraphicsOptions(javax.swing.DebugGraphics.LOG_OPTION);
         jPanel3.setMaximumSize(new java.awt.Dimension(32767, 100));
         jPanel3.setLayout(new java.awt.GridBagLayout());
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.weightx = 1.0;
-        gridBagConstraints.insets = new java.awt.Insets(8, 10, 8, 10);
-        jPanel3.add(jDateInit, gridBagConstraints);
-
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.weightx = 1.0;
-        gridBagConstraints.insets = new java.awt.Insets(8, 10, 8, 10);
-        jPanel3.add(jDateFinish, gridBagConstraints);
+        jPanel3.add(jDateInit, new java.awt.GridBagConstraints());
+        jPanel3.add(jDateFinish, new java.awt.GridBagConstraints());
 
         btnCER.setText("Seleccionar .cer");
         btnCER.addActionListener(this::btnCERActionPerformed);
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.weightx = 1.0;
-        gridBagConstraints.insets = new java.awt.Insets(8, 10, 8, 10);
-        jPanel3.add(btnCER, gridBagConstraints);
+        jPanel3.add(btnCER, new java.awt.GridBagConstraints());
 
         btnKEY.setText("Seleccionar .key");
         btnKEY.addActionListener(this::btnKEYActionPerformed);
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.weightx = 1.0;
-        gridBagConstraints.insets = new java.awt.Insets(8, 10, 8, 10);
-        jPanel3.add(btnKEY, gridBagConstraints);
+        jPanel3.add(btnKEY, new java.awt.GridBagConstraints());
 
         txtPassword.setAlignmentX(4.0F);
         txtPassword.setMinimumSize(new java.awt.Dimension(300, 22));
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.ipadx = 10;
-        gridBagConstraints.weightx = 1.0;
-        gridBagConstraints.insets = new java.awt.Insets(8, 10, 8, 10);
         jPanel3.add(txtPassword, gridBagConstraints);
 
         btnSearchSAT.setText("Consulta SAT");
         btnSearchSAT.addActionListener(this::btnSearchSATActionPerformed);
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.weightx = 1.0;
-        gridBagConstraints.insets = new java.awt.Insets(8, 10, 8, 10);
-        jPanel3.add(btnSearchSAT, gridBagConstraints);
+        jPanel3.add(btnSearchSAT, new java.awt.GridBagConstraints());
 
         panelOpciones.add(jPanel3);
 

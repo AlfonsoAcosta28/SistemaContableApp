@@ -56,6 +56,8 @@ import javax.swing.RowFilter;
 import javax.swing.JLabel;
 import javax.swing.JRadioButton;
 import javax.swing.JSeparator;
+import javax.swing.UIManager;
+import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.table.TableRowSorter;
 
 public class VistaP extends javax.swing.JFrame {
@@ -103,10 +105,17 @@ public class VistaP extends javax.swing.JFrame {
             = new com.mycompany.mavenproject1.sat.controlador.SatDescargaMasivaController();
 
     public VistaP() {
-        // NOTA: el Look & Feel ya se define una sola vez en main() (Nimbus).
-        // Antes aqui se volvia a forzar el L&F nativo del sistema, lo que
-        // pisaba a Nimbus justo antes de initComponents() y contribuia al
-        // bug de repintado del JDateChooser (JCalendar) en Windows.
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (ClassNotFoundException ex) {
+            System.getLogger(VistaP.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+        } catch (InstantiationException ex) {
+            System.getLogger(VistaP.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+        } catch (IllegalAccessException ex) {
+            System.getLogger(VistaP.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+        } catch (UnsupportedLookAndFeelException ex) {
+            System.getLogger(VistaP.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+        }
         tableModel = new DefaultTableModel() {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -121,8 +130,6 @@ public class VistaP extends javax.swing.JFrame {
         crearCheckboxesFilas();
         crearOpcionesDescargaSAT();
     }
-    
-    
 
     /** Agrega, por código (sin tocar el .form), los checkboxes de tipo de consulta SAT. */
     private void crearOpcionesDescargaSAT() {
@@ -146,10 +153,10 @@ public class VistaP extends javax.swing.JFrame {
         jPanel7 = new javax.swing.JPanel();
         btnZip = new javax.swing.JButton();
         btnFolder = new javax.swing.JButton();
-        lblEstado = new javax.swing.JLabel();
         jPanel8 = new javax.swing.JPanel();
         btnExportExcel = new javax.swing.JButton();
         jPanel3 = new javax.swing.JPanel();
+        lblEstado = new javax.swing.JLabel();
         jDateInit = new com.toedter.calendar.JDateChooser();
         jDateFinish = new com.toedter.calendar.JDateChooser();
         btnCER = new javax.swing.JButton();
@@ -191,10 +198,6 @@ public class VistaP extends javax.swing.JFrame {
         btnFolder.addActionListener(this::btnFolderActionPerformed);
         jPanel7.add(btnFolder);
 
-        lblEstado.setFont(new java.awt.Font("Poppins", 0, 12)); // NOI18N
-        lblEstado.setText("a");
-        jPanel7.add(lblEstado);
-
         jPanel6.add(jPanel7);
 
         jPanel8.setBackground(new java.awt.Color(255, 255, 255));
@@ -211,46 +214,25 @@ public class VistaP extends javax.swing.JFrame {
         jPanel3.setBackground(new java.awt.Color(255, 255, 255));
         jPanel3.setDebugGraphicsOptions(javax.swing.DebugGraphics.LOG_OPTION);
         jPanel3.setMaximumSize(new java.awt.Dimension(32767, 100));
-        jPanel3.setLayout(new java.awt.GridBagLayout());
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.weightx = 1.0;
-        gridBagConstraints.insets = new java.awt.Insets(8, 10, 8, 10);
-        jPanel3.add(jDateInit, gridBagConstraints);
+        jPanel3.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 50, 0));
 
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.weightx = 1.0;
-        gridBagConstraints.insets = new java.awt.Insets(8, 10, 8, 10);
-        jPanel3.add(jDateFinish, gridBagConstraints);
+        lblEstado.setFont(new java.awt.Font("Poppins", 0, 12)); // NOI18N
+        jPanel3.add(lblEstado);
+        jPanel3.add(jDateInit);
+        jPanel3.add(jDateFinish);
 
         btnCER.setText("Seleccionar .cer");
         btnCER.addActionListener(this::btnCERActionPerformed);
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.weightx = 1.0;
-        gridBagConstraints.insets = new java.awt.Insets(8, 10, 8, 10);
-        jPanel3.add(btnCER, gridBagConstraints);
+        jPanel3.add(btnCER);
 
         btnKEY.setText("Seleccionar .key");
         btnKEY.addActionListener(this::btnKEYActionPerformed);
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.weightx = 1.0;
-        gridBagConstraints.insets = new java.awt.Insets(8, 10, 8, 10);
-        jPanel3.add(btnKEY, gridBagConstraints);
-
-        txtPassword.setAlignmentX(4.0F);
-        txtPassword.setMinimumSize(new java.awt.Dimension(300, 22));
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        gridBagConstraints.ipadx = 10;
-        gridBagConstraints.weightx = 1.0;
-        gridBagConstraints.insets = new java.awt.Insets(8, 10, 8, 10);
-        jPanel3.add(txtPassword, gridBagConstraints);
+        jPanel3.add(btnKEY);
+        jPanel3.add(txtPassword);
 
         btnSearchSAT.setText("Consulta SAT");
         btnSearchSAT.addActionListener(this::btnSearchSATActionPerformed);
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.weightx = 1.0;
-        gridBagConstraints.insets = new java.awt.Insets(8, 10, 8, 10);
-        jPanel3.add(btnSearchSAT, gridBagConstraints);
+        jPanel3.add(btnSearchSAT);
 
         panelOpciones.add(jPanel3);
 
@@ -1412,13 +1394,6 @@ public class VistaP extends javax.swing.JFrame {
     }
 
     public static void main(String args[]) {
-        // Desactiva el pipeline Direct3D/DirectDraw de Java2D: en Windows,
-        // combinado con componentes Swing antiguos (como JCalendar), causa
-        // que la pantalla solo se repinte donde pasa el mouse. Debe fijarse
-        // antes de tocar cualquier clase AWT/Swing.
-        System.setProperty("sun.java2d.d3d", "false");
-        System.setProperty("sun.java2d.noddraw", "true");
-
         /* Set the Nimbus look and feel */
         //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
         /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.

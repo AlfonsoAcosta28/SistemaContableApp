@@ -9,6 +9,7 @@ com\mycompany\mavenproject1\VistaP.class
 com\mycompany\mavenproject1\sat\modelo\DescargaMasivaCfdiService.class
 com\mycompany\mavenproject1\ItemValor.class
 com\mycompany\mavenproject1\sat\modelo\XmlDSigSigner.class
+com\mycompany\mavenproject1\PlaceholderPasswordField.class
 com\mycompany\mavenproject1\sat\modelo\SatDescargaMasivaException.class
 com\mycompany\mavenproject1\sat\modelo\SatAutenticacionService.class
 com\mycompany\mavenproject1\Filas.class
@@ -27,4 +28,5 @@ com\mycompany\mavenproject1\VistaP$9.class
 com\mycompany\mavenproject1\FilaItemConfig$CheckboxValor.class
 com\mycompany\mavenproject1\sat\modelo\SatSolicitudService.class
 com\mycompany\mavenproject1\FilaItemConfig.class
+com\mycompany\mavenproject1\PlaceholderTextField.class
 com\mycompany\mavenproject1\sat\controlador\SatDescargaListener.class
